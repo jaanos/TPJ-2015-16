@@ -113,8 +113,8 @@ let collect = handler
 
 (* EXERCISE 5
 
-   Following Example 3.3 of Note 12, simulate the behaviour of a shallow 
-   handler that adds the prefix "The first print statement is: "std#print to the
+   Following Example 3.3 of Note 12, simulate the behaviour of a shallow
+   handler that adds the prefix "The first print statement is: " to the
    first print output produced by a computation, but which leaves the
    rest, and the result unaffected.
 
@@ -135,10 +135,10 @@ let collect = handler
    If we were to add a shallow-handle construct to Eff, it would be natural
    to use syntax such as:
 
-      with 
+      with
        | val v -> exp0
        | std#print s k -> exp1
-      handle c
+      shallow-handle c
 
    cf. Note 12. Although Eff does not support this syntax for shallow
    handling, it is possible to support it indirectly by defining a function:
