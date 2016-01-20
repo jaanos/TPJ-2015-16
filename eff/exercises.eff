@@ -42,7 +42,7 @@ let hello2 () = std#print "Hello World!"
    of Note 12
 *)
 
-(* The next example serve to illustrate the Eff syntax for defining
+(* The next example serves to illustrate the Eff syntax for defining
    functions by recursion, which closely follows OCaml.
 *)
 
@@ -138,7 +138,7 @@ let collect = handler
       with
        | val v -> exp0
        | std#print s k -> exp1
-      shallow-handle c
+      shallow_handle c
 
    cf. Note 12. Although Eff does not support this syntax for shallow
    handling, it is possible to support it indirectly by defining a function:
