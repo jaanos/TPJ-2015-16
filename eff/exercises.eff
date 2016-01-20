@@ -42,7 +42,7 @@ let hello2 () = std#print "Hello World!"
    of Note 12
 *)
 
-(* The next example serve to illustrate the Eff syntax for defining
+(* The next example serves to illustrate the Eff syntax for defining
    functions by recursion, which closely follows OCaml.
 *)
 
