@@ -1,0 +1,267 @@
+
+(* TPJ 2015-16 Week 12 exercises:
+
+   Programming with Effects and Handlers in Eff
+
+   This exercise is designed to be run on the on-line Eff interpreter at
+
+   http://www.eff-lang.org/try/
+
+   Simply copy the code into the top window, click on the "execute" button
+   in the middle, and watch your code run in the bottom window. You can also
+   use the Eff interpreter command-line in the bottom window.
+*)
+
+(* First effect: output.
+
+   We make use of the built-in effect operation std#print : string -> unit
+
+   Here std#print is the instance of print that identifies the output channel
+   as standard output - namely the dispalay of the interpreter.
+*)
+
+(* The code below defines hello1 : unit
+                      and hello2 : unit -> unit    *)
+
+let hello1 = std#print "Hello World!"
+;;
+let hello2 () = std#print "Hello World!"
+;;
+
+(* EXERCISE 1
+
+   Try running at the command line
+
+   hello1
+   hello2 ()
+
+   Why does the first of these not produce any output? When was the
+   print in the definition of hello1 performed?
+
+   Note that hello2 is an example of thunking as discussed in Example 3.2
+   of Note 12
+*)
+
+(* The next example serve to illustrate the Eff syntax for defining
+   functions by recursion, which closely follows OCaml.
+*)
+
+let rec countupto n =
+  if n = 0 then ()
+  else (countupto (n-1) ; std#print ((to_string n) ^ "\n"))
+
+(* EXERCISE 2
+
+   What is the type of countupto. What does countupto n do?
+
+   Write a recursive function countdownfrom n, which counts down from n to 1
+*)
+
+(* We now consider some handlers written in Eff syntax. A special syntactic
+   construction gives the body of the handler - the part that comes after
+   the "with"
+*)
+
+let addprefix = handler
+                | std#print s k -> 
+                    std#print ("I am now printing " ^ s) ; k()
+
+let collect = handler
+              | val _ -> []                  (* val is return in Note 12 *)
+              | std#print s k -> s :: (k ()) (* :: adds element to list *)
+
+(* EXERCISE 3
+
+   Try out:
+
+       with addprefix handle countupto 10
+
+       with collect handle countupto 10
+
+   and understand how the code generates the observed behaviour.
+
+   Also type in:
+
+       addprefix
+
+       collect
+
+   and observe the types of the handlers
+
+       addprefix : 'a => 'a
+
+       collect : 'a => string list
+
+   Here 'a is a type variable, and => is a special type constructor
+   for handlers. The type of addprefix says that if c is a 
+   computation that returns values of a type 'a, then handling c with 
+   addprefix results in a computation of the same type 'a. The type of collect
+   says that regardless of the type of the c, handling c with collect
+   results in a computation that produces a string list as its result.
+*)
+
+(* EXERCISE 4
+
+   Write a handler "reverse" that reverses the order of execution of
+   print statements, following Example 2.2 of Note 12. Use this 
+   handler to reimplement the countdownto function defined before.
+
+   What is the type of the reverse handler? Can you modify the definition
+   so it has type 'a => 'a; i.e., so that the original result and type of the
+   computation get retained?
+*)
+
+(* EXERCISE 5
+
+   Following Example 3.3 of Note 12, simulate the behaviour of a shallow 
+   handler that adds the prefix "The first print statement is: "std#print to the
+   first print output produced by a computation, but which leaves the
+   rest, and the result unaffected.
+
+   Do this, by implementing first a handler
+
+     shallow_addprefix : 'a => bool -> 'a
+
+   so that the desired behaviour can be obtained by, e.g.,
+
+     (with shallow_addprefix handle countupto 10) true
+
+   You may find it useful to use the Eff (and OCaml) syntax for lambda 
+   abstraction, which uses "fun x -> exp" for "lambda x . exp"
+*)
+
+(* EXERCISE 6
+
+   If we were to add a shallow-handle construct to Eff, it would be natural
+   to use syntax such as:
+
+      with 
+       | val v -> exp0
+       | std#print s k -> exp1
+      handle c
+
+   cf. Note 12. Although Eff does not support this syntax for shallow
+   handling, it is possible to support it indirectly by defining a function:
+
+     shallow_handle : ('a ⟶  'a) ⟶ 
+                       (string ⟶  (unit ⟶  'a) ⟶  'a) ⟶ 
+                        (unit ⟶  'a) ⟶  'a 
+   such that 
+
+      shallow_handle (fun v -> exp0) (fun s k -> exp1) (fun () -> c)
+
+   has the same behaviour as the expression given at the top of the 
+   exercise. Note that the handled computation c is (by necessity)
+   passed as an argument to shallow_handle in thunked form.
+
+   Define such a function shallow_handle.
+
+   Test it out by checking that
+
+      shallow_handle (fun v -> v)
+                     (fun s k -> std#print "The first print statement is: " ;
+                                 std#print s ;
+                                 k ())
+                     (fun () -> countupto 10)
+
+   reproduces the behaviour of Exercise 5.               
+*)
+
+(* Second effect: nondeterminism and parallel
+
+   The code below declares a new effect instance nondet with operation
+
+     nondet#choose : unit -> bool
+*)
+
+type nondeterministic = effect
+  operation choose : unit -> bool
+end
+
+let nondet = new nondeterministic
+
+let either_or q1 q2 =
+    fun () -> let y = nondet#choose () in if y then q1 () else q2 ()
+
+(* EXERCISE 7
+
+   Define a handler
+
+     list_all : 'a => 'a list
+
+   such that
+
+     with list_all handle c
+
+   returns a list of every value that c can return via some 
+   nondeterministic sequence of boolean results of nondet#choose () 
+   operations. Your list should contain as many repetitions of the
+   same value as there are branches leading to that value.
+
+   For example:
+
+     with list_all handle either_or (either_or (fun () -> 0)
+                                               (fun () -> 1))
+                                    (either_or (fun () -> 1)
+                                               (fun () -> 2))
+                                    ()
+
+   should return the integer list [0; 1; 1; 2] (or a permutation thereof).
+
+   Similarly:
+
+     with list_all handle with collect 
+       handle either_or (either_or (fun () -> std#print "A")
+                                   (fun () -> std#print "B"))
+                        (fun () -> std#print "C"; std#print "D")
+                        ()
+
+   should return (a permutation of) [["A"]; ["B"]; ["C"; "D"]]
+
+   For this exercise, it may be useful to use the Eff operation
+
+     l1 @ l2
+
+   which appends the list l1 to l2 (the same as l1 ++ l2 in Haskell)
+*)
+
+(* EXERCISE 8
+
+   Use your function shallow_handle from Exercise 6 to write the function
+
+     parallel : (unit ⟶  'a) ⟶  (unit ⟶  'a) ⟶  unit ⟶  'a
+
+   which constructs the nondeterministic interleavings of print 
+   operations as would arise under parallel execution. See Example 3.2 
+   of Note 12. (The type above is more general than the
+   one given in exercise 3.2, but it is the natural polymorphic type 
+   for the parallel operation.)
+
+   Test your function out on:
+
+     with list_all handle with collect 
+       handle parallel (fun () -> std#print "A"; std#print "B")
+                       (fun () -> std#print "C"; std#print "D")
+                       ()
+
+     with list_all handle with collect 
+       handle parallel (fun () -> std#print "A"; std#print "B")
+                       (parallel (fun () -> std#print "C"; std#print "D")
+                                 (fun () -> std#print "E"; std#print "F"))
+                       ()
+
+    (You can also use the Eff function length: 'a list -> int
+    to find the length of the returned list l.)
+
+    Do you find the behaviour surprising? Can you explain it? (It is
+    related to the so-called "state explosion problem" in computer science.)
+*)
+     
+(* EXERCISE 9 - open-ended
+
+   Browse and play with the demonstration examples available (under
+   "Load examples") at the Eff on-line interpreter webpage. 
+
+   http://www.eff-lang.org/try/
+
+*) 
