@@ -111,6 +111,21 @@ let collect = handler
    computation get retained?
 *)
 
+(* SOLUTION 4
+
+   let reverse = handler 
+                  | std#print s k -> 
+                       k () ; std#print s
+
+   let countdownto n = with reverse handle countupto n
+
+   (* Modified version of type 'a => 'a *)
+
+   let reverse = handler 
+                  | std#print s k -> 
+                       let v = k () in std#print s ; v
+*)
+
 (* EXERCISE 5
 
    Following Example 3.3 of Note 12, simulate the behaviour of a shallow
@@ -129,6 +144,18 @@ let collect = handler
    You may find it useful to use the Eff (and OCaml) syntax for lambda 
    abstraction, which uses "fun x -> exp" for "lambda x . exp"
 *)
+
+(* SOLUTION 5
+
+   let shallow_addprefix = handler 
+   | val v -> fun _ -> v
+   | std#print s k -> 
+       fun y -> if y then std#print "The first print statement is: "
+                     else () ;
+                std#print s ;
+                k () false
+*)
+
 
 (* EXERCISE 6
 
@@ -165,6 +192,18 @@ let collect = handler
                      (fun () -> countupto 10)
 
    reproduces the behaviour of Exercise 5.               
+*)
+
+(* SOLUTION 6
+
+  let shallow_handle f g q =
+    ( with handler | val v -> 
+                       fun y -> if y then f v
+                                else v
+                   | std#print s k ->
+                     fun y -> if y then g s (fun w -> k w false)
+                                else (let w = std#print s in k w false)
+      handle q () ) true
 *)
 
 (* Second effect: nondeterminism and parallel
@@ -225,6 +264,19 @@ let either_or q1 q2 =
    which appends the list l1 to l2 (the same as l1 ++ l2 in Haskell)
 *)
 
+(* SOLUTION 7
+
+  This handler already exists as choose_all in the examples on the Eff
+  web interface, so the students can find a template if stuck. In any case,
+  the solution is:
+
+  let list_all =
+    handler
+    | val x -> [x]
+    | nondet#choose () k -> (k true) @ (k false)
+
+*)
+
 (* EXERCISE 8
 
    Use your function shallow_handle from Exercise 6 to write the function
@@ -255,6 +307,20 @@ let either_or q1 q2 =
 
     Do you find the behaviour surprising? Can you explain it? (It is
     related to the so-called "state explosion problem" in computer science.)
+*)
+
+(* SOLUTION 8
+
+let rec parallel q1 q2 =
+   either_or ( fun _ -> shallow_handle (fun v -> q2 ())
+                                       (fun s k -> std#print s ;
+	                                           parallel k q2 ())
+                                       q1 )
+             ( fun _ -> shallow_handle (fun v -> q1 ())
+                                       (fun s k -> std#print s ;
+	                                           parallel q1 k ())
+                                       q2 )
+
 *)
      
 (* EXERCISE 9 - open-ended
