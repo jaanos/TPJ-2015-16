@@ -15,6 +15,13 @@ The *microhaskell* folder contains the code for the MicroHaskell language, a fra
 
 The *lmh* folder contains the code for LMH, which is MicroHaskell with type inferrence.
 
+### eff
+
+The *eff* folder contains exercises for the Eff language.
+
+* The *eff* branch only contains exercises.
+* The *eff-solutions* branch also contains solutions.
+
 ### homework1
 
 The *homework1* folder contains the files for the first homework. The [handout](https://ucilnica.fmf.uni-lj.si/mod/resource/view.php?id=16922) is available on Moodle.
